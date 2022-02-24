@@ -1,0 +1,23 @@
+{
+  "name": "movies-library1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alaaldin98/Movies-Library1.git"
+  },
+  "keywords": [],
+  "author": "Alaaldin Alhanini",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Alaaldin98/Movies-Library1/issues"
+  },
+  "homepage": "https://github.com/Alaaldin98/Movies-Library1#readme",
+  "dependencies": {
+    "express": "^4.17.3"
+  }
+}

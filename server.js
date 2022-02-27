@@ -7,13 +7,19 @@ const axios = require("axios");
 dotenv.config();
 const APIKEY = process.env.APIKEY;
 const PORT = process.env.PORT;
+const DATABASE_URL = process.env.DATABASE_URL;
 
+
+const client = new pg.Client(DATABASE_URL);
 
 function Recipe(title,poster_path,overview ){
     this.title = title;
     this.poster_path = poster_path;
     this.overview = overview;
 };
+app.post("/addMovie", addMovieHandler );
+app.get("/favMovie", favMovieHandler);
+app.use(express.json());
 app.get(`/`,dataHandler);
 app.get(`/favorite`,favoriteHandler);
 app.get(`/trending`,trendingHandler);
@@ -61,6 +67,26 @@ function searchRecipesHandler(req, res){
 
 }
 
+function addMovieHandler(req, res){
+    const recipe = req.body;
+
+    const sql = `INSERT INTO favRecipes(title, readyInMinutes, vegetarian, sourceUrl, image, summary, instructions) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`
+    const values = [recipe.title, recipe.readyInMinutes, recipe.vegetarian, recipe.sourceUrl, recipe.image, recipe.summary, recipe.instructions]
+    client.query(sql, values).then((result)=>{
+        return res.status(201).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res);
+    });
+};
+function favMovieHandler(req, res){
+    const sql = `SELECT * FROM favRecipes`;
+
+    client.query(sql).then((result) => {
+        return res.status(200).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res);
+    });
+};
 
 
 function favoriteHandler(request, response){
@@ -80,6 +106,9 @@ function errorHandler(error,req,res){
     return res.status(500).send(err);
 }
 
-app.listen(PORT, () => {
-    console.log(`Listen on ${PORT}`);
+client.connect()
+.then(() => {
+    app.listen(PORT, () => {
+        console.log(`Listen on ${PORT}`);
+    });
 });

@@ -17,16 +17,36 @@ function Recipe(title,poster_path,overview ){
     this.poster_path = poster_path;
     this.overview = overview;
 };
+// <<<<< Task13<<
 app.post("/addMovie", addMovieHandler );
 app.get("/favMovie", favMovieHandler);
 app.use(express.json());
+// =======
+function moviesdet(backdrop_path,genre_ids,id,original_language,original_title,overview,popularity,release_date,title,video,vote_average,vote_count){
+    this.backdrop_path = backdrop_path;
+    this.genre_ids = genre_ids;
+    this.id = id;
+    this.original_language = original_language;
+    this.original_title = original_title;
+    this.overview = overview;
+    this.popularity = popularity;
+    this.release_date = release_date;
+    this.title = title;
+    this.video = video;
+    this.vote_average = vote_average;
+    this.vote_count = vote_count;
+};
+
+// >>>>>>> main
 app.get(`/`,dataHandler);
 app.get(`/favorite`,favoriteHandler);
 app.get(`/trending`,trendingHandler);
+app.get(`/top_rated`,top_rated);
+app.get(`/now_playing`,now_playing);
+
 app.use("*", notFoundHandler);
 app.use("*", errorHandler);
 app.get("/search", searchRecipesHandler)
-
 
 function dataHandler(req, res){
     let result = [];
@@ -45,8 +65,40 @@ function trendingHandler(req, res){
             let oneRecipe = new Recipe(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
+    
         return res.status(200).json(result);
     }).catch(error => {
+        errorHandler(error, req, res);
+    })    
+};
+
+function top_rated(req, res){
+    let result = [];
+    axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${APIKEY}`)
+    .then(apiResponse => {
+        apiResponse.data.recipes.map(value => {
+            let oneRecipe = new moviesdet(value.backdrop_path,value.genre_ids,value.id,value.original_language,value.original_title,value.overview,value.popularity,value.release_date,value.title,value.video,value.vote_average,value.vote_count);
+            result.push(oneRecipe);
+        })
+    
+        return res.status(200).json(result);
+    })
+    .catch(error => {
+        errorHandler(error, req, res);
+    })    
+};
+function now_playing(req, res){
+    let result = [];
+    axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${APIKEY}`)
+    .then(apiResponse => {
+        apiResponse.data.recipes.map(value => {
+            let oneRecipe = new moviesdet(value.backdrop_path,value.genre_ids,value.id,value.original_language,value.original_title,value.overview,value.popularity,value.release_date,value.title,value.video,value.vote_average,value.vote_count);
+            result.push(oneRecipe);
+        })
+    
+        return res.status(200).json(result);
+    })
+    .catch(error => {
         errorHandler(error, req, res);
     })    
 };

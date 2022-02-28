@@ -8,7 +8,7 @@ dotenv.config();
 const APIKEY = process.env.APIKEY;
 const PORT = process.env.PORT;
 const DATABASE_URL = process.env.DATABASE_URL;
-
+const pg = require("pg");
 
 const client = new pg.Client(DATABASE_URL);
 
@@ -17,27 +17,19 @@ function Recipe(title,poster_path,overview ){
     this.poster_path = poster_path;
     this.overview = overview;
 };
-// <<<<< Task13<<
-app.post("/addMovie", addMovieHandler );
-app.get("/favMovie", favMovieHandler);
-app.use(express.json());
-// =======
-function moviesdet(backdrop_path,genre_ids,id,original_language,original_title,overview,popularity,release_date,title,video,vote_average,vote_count){
-    this.backdrop_path = backdrop_path;
-    this.genre_ids = genre_ids;
-    this.id = id;
-    this.original_language = original_language;
-    this.original_title = original_title;
-    this.overview = overview;
-    this.popularity = popularity;
-    this.release_date = release_date;
-    this.title = title;
-    this.video = video;
-    this.vote_average = vote_average;
-    this.vote_count = vote_count;
-};
 
-// >>>>>>> main
+
+function addMovie(id,title,release_date,poster_path,overview){
+    this.id = id;
+    this.title = title;
+    this.release_date = release_date;
+    this.poster_path = poster_path;
+    this.overview = overview;
+};
+app.use(express.json());
+app.post("/addMovie", addMovieHandler);
+app.get("/favMovie", favMovieHandler);
+
 app.get(`/`,dataHandler);
 app.get(`/favorite`,favoriteHandler);
 app.get(`/trending`,trendingHandler);
@@ -62,7 +54,7 @@ function trendingHandler(req, res){
     axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}&language=en-US`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new Recipe(value.id,value.title,value.release_date, value.poster_path,value.overview);
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -77,7 +69,7 @@ function top_rated(req, res){
     axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${APIKEY}`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new moviesdet(value.backdrop_path,value.genre_ids,value.id,value.original_language,value.original_title,value.overview,value.popularity,value.release_date,value.title,value.video,value.vote_average,value.vote_count);
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -92,7 +84,7 @@ function now_playing(req, res){
     axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${APIKEY}`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new moviesdet(value.backdrop_path,value.genre_ids,value.id,value.original_language,value.original_title,value.overview,value.popularity,value.release_date,value.title,value.video,value.vote_average,value.vote_count);
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -109,7 +101,7 @@ function searchRecipesHandler(req, res){
     axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&language=en-US&query=${search}`)
     .then(apiResponse=>{
         apiResponse.data.results.map(value => {
-            let oneRecipe = new Recipe(value.id || "N/A", value.title || "N/A", value.readyInMinutes || "N/A", value.vegetarian || "N/A", value.sourceUrl || "N/A", value.image || "N/A", value.summary || "N/A", value.instructions || "N/A")
+            let oneRecipe = new addMovie(value.id || "N/A", value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
             results.push(oneRecipe);
         });
         return res.status(200).json(results);
@@ -122,8 +114,8 @@ function searchRecipesHandler(req, res){
 function addMovieHandler(req, res){
     const recipe = req.body;
 
-    const sql = `INSERT INTO favRecipes(title, readyInMinutes, vegetarian, sourceUrl, image, summary, instructions) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`
-    const values = [recipe.title, recipe.readyInMinutes, recipe.vegetarian, recipe.sourceUrl, recipe.image, recipe.summary, recipe.instructions]
+    const sql = `INSERT INTO favmovie(id,title,release_date,poster_path,overview) VALUES($1, $2, $3, $4, $5) RETURNING *`
+    const values = [recipe.id, recipe.title, recipe.release_date, recipe.poster_path, recipe.overview]
     client.query(sql, values).then((result)=>{
         return res.status(201).json(result.rows);
     }).catch((error) => {
@@ -131,7 +123,7 @@ function addMovieHandler(req, res){
     });
 };
 function favMovieHandler(req, res){
-    const sql = `SELECT * FROM favRecipes`;
+    const sql = `SELECT * FROM addmovie`;
 
     client.query(sql).then((result) => {
         return res.status(200).json(result.rows);

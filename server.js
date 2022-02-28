@@ -36,6 +36,10 @@ app.get(`/trending`,trendingHandler);
 app.get(`/top_rated`,top_rated);
 app.get(`/now_playing`,now_playing);
 
+app.get("/getMovie/:id", favRecipeHandler)
+app.put("/UPDATE/:id", updateFavRecipeHandler);
+app.delete("/DELETE/:id", deleteFavRecipeHandler);
+
 app.use("*", notFoundHandler);
 app.use("*", errorHandler);
 app.get("/search", searchRecipesHandler)
@@ -149,6 +153,47 @@ function errorHandler(error,req,res){
     }
     return res.status(500).send(err);
 }
+function updateFavRecipeHandler(req, res){
+    const id = req.params.id;
+    const recipe = req.body;
+   
+    const sql = `UPDATE favmovie SET  overview=$1, title=$2,release_date=$3, poster_path=$4, WHERE id=$1 RETURNING *;`;
+    const values = [recipe.id, recipe.title, recipe.release_date, recipe.poster_path, recipe.overview];
+
+    client.query(sql, values).then((result) => {
+        return res.status(200).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res);
+    })
+
+};
+
+function deleteFavRecipeHandler(req, res){
+    const id = req.params.id
+
+    const sql = `DELETE FROM favmovie WHERE id=$1;`
+    const values = [id];
+
+    client.query(sql, values).then(() => {
+        return res.status(204).json({})
+    }).catch(error => {
+        errorHandler(error, req, res);
+    })
+};
+
+function favRecipeHandler(req, res){
+    let id = req.params.id;
+    
+    const sql = `SELECT * FROM favmovie WHERE id=$1;`;
+    const values = [id];
+
+    client.query(sql, values).then((result) => {
+        return res.status(200).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res)
+    })
+};
+
 
 client.connect()
 .then(() => {

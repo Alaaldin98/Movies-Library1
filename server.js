@@ -10,12 +10,12 @@ const PORT = process.env.PORT;
 const cors = require ('cors');
 const DATABASE_URL = process.env.DATABASE_URL;
 const pg = require("pg");
-// const client = new pg.Client(DATABASE_URL);
+const client = new pg.Client(DATABASE_URL);
 
-const client = new pg.Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
+// const client = new pg.Client({
+//     connectionString: process.env.DATABASE_URL,
+//     ssl: { rejectUnauthorized: false }
+// });
 
 function Recipe(title,poster_path,overview ){
     this.title = title;
@@ -24,7 +24,8 @@ function Recipe(title,poster_path,overview ){
 };
 
 
-function addMovie(title,release_date,poster_path,overview){
+function addMovie(id,title,release_date,poster_path,overview){
+    this.id = id;
     this.title = title;
     this.release_date = release_date;
     this.poster_path = poster_path;
@@ -60,10 +61,10 @@ function dataHandler(req, res){
 
 function trendingHandler(req, res){
     let result = [];
-    axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}&language=en-US`)
+    axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}`)
     .then(apiResponse => {
-        apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
+        apiResponse.data.results.map(value => {
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -77,8 +78,8 @@ function top_rated(req, res){
     let result = [];
     axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${APIKEY}`)
     .then(apiResponse => {
-        apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
+        apiResponse.data.results.map(value => {
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -92,8 +93,8 @@ function now_playing(req, res){
     let result = [];
     axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${APIKEY}`)
     .then(apiResponse => {
-        apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
+        apiResponse.data.results.map(value => {
+            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -107,10 +108,10 @@ function now_playing(req, res){
 function searchRecipesHandler(req, res){
     const search = req.query.recipe
     let results = [];
-    axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&language=en-US&query=${search}`)
+    axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&query=${search}`)
     .then(apiResponse=>{
         apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
+            let oneRecipe = new addMovie(value.id || "N/A",value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
             results.push(oneRecipe);
         });
         return res.status(200).json(results);

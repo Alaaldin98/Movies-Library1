@@ -7,8 +7,10 @@ const axios = require("axios");
 dotenv.config();
 const APIKEY = process.env.APIKEY;
 const PORT = process.env.PORT;
-// const DATABASE_URL = process.env.DATABASE_URL;
+const cors = require ('cors');
+const DATABASE_URL = process.env.DATABASE_URL;
 const pg = require("pg");
+// const client = new pg.Client(DATABASE_URL);
 
 const client = new pg.Client({
     connectionString: process.env.DATABASE_URL,
@@ -22,13 +24,13 @@ function Recipe(title,poster_path,overview ){
 };
 
 
-function addMovie(id,title,release_date,poster_path,overview){
-    this.id = id;
+function addMovie(title,release_date,poster_path,overview){
     this.title = title;
     this.release_date = release_date;
     this.poster_path = poster_path;
     this.overview = overview;
 };
+app.use(cors());
 app.use(express.json());
 app.post("/addMovie", addMovieHandler);
 app.get("/favMovie", favMovieHandler);
@@ -61,7 +63,7 @@ function trendingHandler(req, res){
     axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}&language=en-US`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
+            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -76,7 +78,7 @@ function top_rated(req, res){
     axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${APIKEY}`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
+            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -91,7 +93,7 @@ function now_playing(req, res){
     axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${APIKEY}`)
     .then(apiResponse => {
         apiResponse.data.recipes.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
+            let oneRecipe = new addMovie(value.title,value.release_date, value.poster_path,value.overview);
             result.push(oneRecipe);
         })
     
@@ -108,7 +110,7 @@ function searchRecipesHandler(req, res){
     axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&language=en-US&query=${search}`)
     .then(apiResponse=>{
         apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.id || "N/A", value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
+            let oneRecipe = new addMovie(value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
             results.push(oneRecipe);
         });
         return res.status(200).json(results);
@@ -121,8 +123,8 @@ function searchRecipesHandler(req, res){
 function addMovieHandler(req, res){
     const recipe = req.body;
 
-    const sql = `INSERT INTO favmovie(id,title,release_date,poster_path,overview) VALUES($1, $2, $3, $4, $5) RETURNING *`
-    const values = [recipe.id, recipe.title, recipe.release_date, recipe.poster_path, recipe.overview]
+    const sql = `INSERT INTO favmovie(title,release_date,poster_path,overview) VALUES($1, $2, $3, $4, $5) RETURNING *`
+    const values = [ recipe.title, recipe.release_date, recipe.poster_path, recipe.overview]
     client.query(sql, values).then((result)=>{
         return res.status(201).json(result.rows);
     }).catch((error) => {
@@ -161,7 +163,7 @@ function updateFavRecipeHandler(req, res){
     const recipe = req.body;
    
     const sql = `UPDATE favmovie SET  overview=$1, title=$2,release_date=$3, poster_path=$4, WHERE id=$1 RETURNING *;`;
-    const values = [recipe.id, recipe.title, recipe.release_date, recipe.poster_path, recipe.overview];
+    const values = [ recipe.title, recipe.release_date, recipe.poster_path, recipe.overview];
 
     client.query(sql, values).then((result) => {
         return res.status(200).json(result.rows);

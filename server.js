@@ -1,15 +1,24 @@
-'use strict';
+'use strict'
+
 const express = require("express");
-const recipes = require("./data.json");
-const app = express();
+
+const movies = require("./data.json");
 const dotenv = require("dotenv");
 const axios = require("axios");
+const pg = require("pg");
+const cors = require("cors");
+
+
 dotenv.config();
+
+const app = express();
+
+app.use(cors());
+
 const APIKEY = process.env.APIKEY;
 const PORT = process.env.PORT;
-const cors = require ('cors');
 const DATABASE_URL = process.env.DATABASE_URL;
-const pg = require("pg");
+
 // const client = new pg.Client(DATABASE_URL);
 
 const client = new pg.Client({
@@ -17,167 +26,68 @@ const client = new pg.Client({
     ssl: { rejectUnauthorized: false }
 });
 
-function Recipe(title,poster_path,overview ){
-    this.title = title;
-    this.poster_path = poster_path;
-    this.overview = overview;
-};
+function Movie(id, title, release_date, poster_path, overview) {
 
-
-function addMovie(id,title,release_date,poster_path,overview){
     this.id = id;
     this.title = title;
     this.release_date = release_date;
     this.poster_path = poster_path;
     this.overview = overview;
+
 };
-app.use(cors());
+
 app.use(express.json());
-app.post("/addMovie", addMovieHandler);
-app.get("/favMovie", favMovieHandler);
 
-app.get(`/`,dataHandler);
-app.get(`/favorite`,favoriteHandler);
-app.get(`/trending`,trendingHandler);
-app.get(`/top_rated`,top_rated);
-app.get(`/now_playing`,now_playing);
 
-app.get("/getMovie/:id", favRecipeHandler)
-app.put("/UPDATE/:id", updateFavRecipeHandler);
-app.delete("/DELETE/:id", deleteFavRecipeHandler);
+
+
+app.get('/', homeHandler);
+
+app.get('/favorite', favoriteHandler);
+
+app.get('/trending', trendingHandler);
+
+app.get('/search', searchHandler);
+
+app.get('/review', reviewHandler);
+
+app.get('/watch', watchHandler);
+
+app.post('/addMovie', addMovieHandler);
+
+app.get('/getMovie', getMovieHandler);
+
+app.put("/UPDATE/:id", updateHandler);
+
+app.delete("/DELETE/:id", deleteHandler);
+
+app.get("/getMovie/:id", getMovieIdHandler)
 
 app.use("*", notFoundHandler);
-app.use("*", errorHandler);
-app.get("/search", searchRecipesHandler)
 
-function dataHandler(req, res){
-    let result = [];
-    recipes.data.forEach((value) => {
-        let oneRecipe = new Recipe(value.title, value.poster_path,value.overview);
-        result.push(oneRecipe);
-    });
-    return res.status(200).json(result);
-};
+app.use(errorHandler);
 
-function trendingHandler(req, res){
-    let result = [];
-    axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}`)
-    .then(apiResponse => {
-        apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
-            result.push(oneRecipe);
-        })
-    
-        return res.status(200).json(result);
-    }).catch(error => {
-        errorHandler(error, req, res);
-    })    
-};
-
-function top_rated(req, res){
-    let result = [];
-    axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${APIKEY}`)
-    .then(apiResponse => {
-        apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
-            result.push(oneRecipe);
-        })
-    
-        return res.status(200).json(result);
-    })
-    .catch(error => {
-        errorHandler(error, req, res);
-    })    
-};
-function now_playing(req, res){
-    let result = [];
-    axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${APIKEY}`)
-    .then(apiResponse => {
-        apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.id,value.title,value.release_date, value.poster_path,value.overview);
-            result.push(oneRecipe);
-        })
-    
-        return res.status(200).json(result);
-    })
-    .catch(error => {
-        errorHandler(error, req, res);
-    })    
-};
-
-function searchRecipesHandler(req, res){
-    const search = req.query.recipe
-    let results = [];
-    axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&query=${search}`)
-    .then(apiResponse=>{
-        apiResponse.data.results.map(value => {
-            let oneRecipe = new addMovie(value.id || "N/A",value.title || "N/A", value.release_date || "N/A", value.poster_path || "N/A", value.overview || "N/A")
-            results.push(oneRecipe);
-        });
-        return res.status(200).json(results);
-    }).catch(error => {
-        errorHandler(error, req, res);
-    })
-
-}
-
-function addMovieHandler(req, res){
-    const recipe = req.body;
-
-    const sql = `INSERT INTO favmovie(title,release_date,poster_path,overview) VALUES($1, $2, $3, $4, $5) RETURNING *`
-    const values = [ recipe.title, recipe.release_date, recipe.poster_path, recipe.overview]
-    client.query(sql, values).then((result)=>{
-        return res.status(201).json(result.rows);
-    }).catch((error) => {
-        errorHandler(error, req, res);
-    });
-};
-function favMovieHandler(req, res){
-    const sql = `SELECT * FROM addmovie`;
-
-    client.query(sql).then((result) => {
-        return res.status(200).json(result.rows);
-    }).catch((error) => {
-        errorHandler(error, req, res);
-    });
-};
-
-
-function favoriteHandler(request, response){
-    
-    return response.send("Welcome to Favorite Page");
-};
-
-function notFoundHandler(req, res){
-    return res.status(404).send("Not Found");
-}
-
-function errorHandler(error,req,res){
-    const err = {
-        status : 500,
-        message : error
-    }
-    return res.status(500).send(err);
-}
-function updateFavRecipeHandler(req, res){
+function updateHandler(req, res) {
     const id = req.params.id;
-    const recipe = req.body;
-   
-    const sql = `UPDATE favmovie SET  overview=$1, title=$2,release_date=$3, poster_path=$4, WHERE id=$1 RETURNING *;`;
-    const values = [ recipe.title, recipe.release_date, recipe.poster_path, recipe.overview];
+    const movie = req.body;
+
+    console.log(movie);
+    const sql = `UPDATE movieTable SET title=$1, release_date=$2 , poster_path=$3 , overview=$4 , comments=$5 WHERE id=$6 RETURNING *;`;
+    const values = [movie.title, movie.release_date, movie.poster_path, movie.overview, movie.comments, id];
 
     client.query(sql, values).then((result) => {
-        return res.status(200).json(result.rows);
+        return res.status(200).json(result);
     }).catch((error) => {
         errorHandler(error, req, res);
     })
+   
 
 };
 
-function deleteFavRecipeHandler(req, res){
+function deleteHandler(req, res) {
     const id = req.params.id
 
-    const sql = `DELETE FROM favmovie WHERE id=$1;`
+    const sql = `DELETE FROM movieTable WHERE id=$1;`
     const values = [id];
 
     client.query(sql, values).then(() => {
@@ -187,23 +97,168 @@ function deleteFavRecipeHandler(req, res){
     })
 };
 
-function favRecipeHandler(req, res){
+function getMovieIdHandler(req, res) {
     let id = req.params.id;
-    
-    const sql = `SELECT * FROM favmovie WHERE id=$1;`;
+
+    const sql = `SELECT * FROM movieTable WHERE id=$1;`;
     const values = [id];
 
     client.query(sql, values).then((result) => {
-        return res.status(200).json(result.rows);
+        return res.status(200).json(result);
     }).catch((error) => {
         errorHandler(error, req, res)
     })
 };
 
 
-client.connect()
-.then(() => {
-    app.listen(PORT, () => {
-        console.log(`Listen on ${PORT}`);
+function addMovieHandler(req, res) {
+    const movie = req.body;
+    console.log(movie);
+    const sql = `INSERT INTO movieTable(title, release_date, poster_path , overview , comments) VALUES($1, $2, $3, $4, $5) RETURNING *`
+    const values = [movie.title, movie.release_date, movie.poster_path, movie.overview, movie.comments]
+    client.query(sql, values).then((result) => {
+        return res.status(201).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res);
     });
+
+
+};
+
+function getMovieHandler(req, res) {
+    const sql = `SELECT * FROM movieTable`;
+
+    client.query(sql).then((result) => {
+        return res.status(200).json(result.rows);
+    }).catch((error) => {
+        errorHandler(error, req, res);
+    });
+};
+
+function trendingHandler(req, res) {
+
+    let result = [];
+
+    axios.get(`https://api.themoviedb.org/3/trending/all/week?api_key=${APIKEY}&language=en-US`)
+        .then(apiResponse => {
+            apiResponse.data.results.map(value => {
+                let theMovie = new Movie(value.id, value.title, value.release_date, value.poster_path, value.overview);
+                result.push(theMovie);
+            })
+            return res.status(200).json(result);
+        }).catch(error => {
+            errorHandler(error, req, res);
+        })
+
+
+
+};
+
+function searchHandler(request, response) {
+    const searching = request.query.original_title;
+    let arr = [];
+    axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${APIKEY}&language=en-US&query=${searching}&include_adult=false`)
+        .then(apiResponse => {
+            apiResponse.data.results.map(value => {
+                let theMovie = new Movie(value.id, value.title, value.release_date, value.poster_path, value.overview);
+                arr.push(theMovie);
+
+            })
+
+            return response.status(200).json(arr);
+
+        }).catch(error => {
+            errorHandler(error, request, response);
+        })
+
+
+}
+
+function reviewHandler(req, res) {
+    let reviewId = req.query.id;
+    //58aa82f09251416f92006a3a   <- USE THIS ID
+
+    let result = [];
+
+    axios.get(`https://api.themoviedb.org/3/review/${reviewId}?api_key=${APIKEY}`)
+        .then(apiResponse => {
+            console.log(apiResponse);
+
+
+            let response = new Movie(apiResponse.data.id, apiResponse.data.author, apiResponse.data.author_details, apiResponse.data.content, apiResponse.data.overview);
+
+
+
+
+            return res.status(200).json(response);
+        }).catch(error => {
+            errorHandler(error, req, res);
+        })
+
+
+
+};
+
+
+
+function watchHandler(req, res) {
+
+    let result = [];
+
+    axios.get(`https://api.themoviedb.org/3/watch/providers/regions?api_key=${APIKEY}&language=en-US`)
+        .then(apiResponse => {
+            apiResponse.data.results.map(value => {
+                let theMovie = new Movie(value.iso_3166_1, value.english_name);
+                result.push(theMovie);
+            })
+            return res.status(200).json(result);
+        }).catch(error => {
+            errorHandler(error, req, res);
+
+        })
+
+};
+
+
+
+
+
+function homeHandler(request, response) {
+
+
+
+    let Summary = new Movie(movies.title, movies.poster_path, movies.overview);
+
+
+    return response.status(200).json(Summary);
+
+}
+
+function favoriteHandler(req, res) {
+
+    return res.send("Welcome to Favorite Page");
+
+}
+
+
+
+function errorHandler(error, requesting, responsing) {
+    const err = {
+        status: 500,
+        message: error.message
+    }
+    return responsing.status(500).send(err);
+}
+
+function notFoundHandler(requesting, responsing) {
+    return responsing.status(404).send("Not Found");
+}
+
+
+
+
+client.connect();
+
+app.listen(PORT, () => {
+    console.log(`Listen on ${PORT}`);
 });
